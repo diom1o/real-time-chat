@@ -1,0 +1,24 @@
+{
+  "name": "real-time-chat",
+  "version": "1.0.0",
+  "description": "A real-time chat application using Node.js, Socket.IO, and React",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "nodemon server.js",
+    "client": "cd client && npm start",
+    "client-install": "cd client && npm install",
+    "build": "cd client && npm run build"
+  },
+  "author": "diom1o",
+  "dependencies": {
+    "express": "^4.17.1",
+    "socket.io": "^4.0.0",
+    "dotenv": "^10.0.0"
+  },
+  "devDependencies": {
+    "concurrently": "^6.0.0",
+    "nodemon": "^2.0.7"
+  }
+}
