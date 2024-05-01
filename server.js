@@ -37,14 +37,31 @@ app.use((error, req, res, next) => {
 
 io.on('connection', (socket) => {
   console.log('A user connected');
-  
-  socket.on('message', (msg) => {
-    if (!msg) {
+
+  // Join a room
+  socket.on('joinRoom', (room) => {
+    console.log(`A user joined room: ${room}`);
+    socket.join(room);
+    // Inform others in the room that a new user has joined
+    socket.to(room).emit('message', `A new user has joined ${room}`);
+  });
+
+  // Leave a room
+  socket.on('leaveRoom', (room) => {
+    console.log(`A user left room: ${room}`);
+    socket.leave(room);
+    // Inform others in the room that a user has left
+    socket.to(room).emit('message', `A user has left ${room}`);
+  });
+
+  socket.on('message', (data) => {
+    if (!data.message) {
       console.error('Received empty message');
       // Optionally, send an error back to the sender if the message is not valid.
       // socket.emit('error', 'Message cannot be empty');
     } else {
-      socket.broadcast.emit('message', msg);
+      // send message to a specific room
+      io.to(data.room).emit('message', data.message);
     }
   });
 
@@ -53,7 +70,6 @@ io.on('connection', (socket) => {
   });
 
   socket.on('error', (err) => {
-    // This is a listener for any unexpected error. For specific events, consider adding more specific handlers.
     console.error('Socket encountered error: ', err.message, 'Closing socket');
     socket.close();
   });
