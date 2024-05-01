@@ -5,17 +5,31 @@ const App = () => {
   const [socket, setSocket] = useState(null);
   const [messages, setMessages] = useState([]);
   const [currentMessage, setCurrentMessage] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const newSocket = io(process.env.REACT_APP_SOCKET_IO_SERVER_URL);
-    setSocket(newSocket);
+    let newSocket;
+    try {
+      newSocket = io(process.env.REACT_APP_SOCKET_IO_SERVER_URL);
+      setSocket(newSocket);
 
-    newSocket.on('message', message => {
-      setMessages(prevMessages => [...prevMessages, message]);
-    });
+      newSocket.on('message', message => {
+        setMessages(prevMessages => [...prevMessages, message]);
+      });
+
+      newSocket.on('connect_error', (err) => {
+        setError("Connection failed. Please try again later.");
+      });
+
+      newSocket.on('error', (errorMessage) => {
+        setError(errorMessage);
+      });
+    } catch (error) {
+      setError("Failed to initialize socket connection.");
+    }
 
     return () => {
-      newSocket.disconnect();
+      if (newSocket) newSocket.disconnect();
     };
   }, []);
 
@@ -23,13 +37,22 @@ const App = () => {
     event.preventDefault();
     if (!currentMessage) return;
 
-    socket.emit('message', currentMessage);
-    setCurrentMessage('');
+    try {
+      socket.emit('message', currentMessage, (response) => {
+        if (!response.ok) {
+          setError("Failed to send message. Please try again later.");
+        }
+      });
+      setCurrentMessage('');
+    } catch (error) {
+      setError("An error occurred while sending the message.");
+    }
   };
 
   return (
     <div>
       <h1>Chat Application</h1>
+      {error && <p style={{ color: "red" }}>{error}</p>}
       <ul>
         {messages.map((message, index) => (
           <li key={index}>{message}</li>
