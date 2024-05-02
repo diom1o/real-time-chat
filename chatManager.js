@@ -4,18 +4,23 @@ const io = require('socket.io')(process.env.SOCKET_IO_PORT || 3000, {
   },
 });
 
-let users = {};
-let messages = [];
+let users = new Map(); // Using Map for more efficient lookups and memory management
+let messages = []; // Consider limiting the size or implementing a cleanup strategy
 
 const addUser = (userId, nickname) => {
-  users[userId] = nickname;
+  users.set(userId, nickname); // More efficient for additions/removals
 };
 
 const removeUser = (userId) => {
-  delete users[userId];
+  users.delete(userId); // More efficient than delete operator for objects
 };
 
 const broadcastMessage = (message) => {
+  // Consider implementing a strategy to limit the size of the messages array
+  // For instance, only keep the last 100 messages in memory
+  if (messages.length >= 100) {
+    messages.shift(); // Remove oldest message to maintain array size
+  }
   messages.push(message);
   io.emit('chat message', message);
 };
