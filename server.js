@@ -35,32 +35,35 @@ app.use((error, req, res, next) => {
   });
 });
 
+const messageCache = {}; // Simple cache for room messages.
+
 io.on('connection', (socket) => {
   console.log('A user connected');
-
+  
   // Join a room
   socket.on('joinRoom', (room) => {
     console.log(`A user joined room: ${room}`);
     socket.join(room);
-    // Inform others in the room that a new user has joined
-    socket.to(room).emit('message', `A new user has joined ${room}`);
+    // Cache and emit room joining message
+    const joinMsg = getCachedRoomMessage(room, `A new user has joined ${room}`);
+    io.to(room).emit('message', joinMsg);
   });
 
   // Leave a room
   socket.on('leaveRoom', (room) => {
     console.log(`A user left room: ${room}`);
     socket.leave(room);
-    // Inform others in the room that a user has left
-    socket.to(room).emit('message', `A user has left ${room}`);
+    // Cache and emit room leaving message
+    const leaveMsg = getCachedRoomMessage(room, `A user has left ${room}`);
+    io.to(room).emit('message', leaveMsg);
   });
 
   socket.on('message', (data) => {
     if (!data.message) {
       console.error('Received empty message');
-      // Optionally, send an error back to the sender if the message is not valid.
-      // socket.emit('error', 'Message cannot be empty');
     } else {
-      // send message to a specific room
+      // Emitting the message to a specific room without caching,
+      // as it's expected to be unique per use-case
       io.to(data.room).emit('message', data.message);
     }
   });
@@ -74,6 +77,18 @@ io.on('connection', (socket) => {
     socket.close();
   });
 });
+
+// Function to retrieve or cache room messages
+function getCachedRoomMessage(room, message) {
+  if (!messageCache[room]) {
+    messageCache[room] = {};
+  }
+  if (!messageCache[room][message]) {
+    console.log(`Caching message for room ${room}`);
+    messageCache[room][message] = message;
+  }
+  return messageCache[room][message];
+}
 
 const PORT = process.env.PORT || 4000;
 
