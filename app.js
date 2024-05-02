@@ -8,45 +8,49 @@ const App = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    let newSocket;
-    try {
-      newSocket = io(process.env.REACT_APP_SOCKET_IO_SERVER_URL);
-      setSocket(newSocket);
+    // Socket Initialization
+    const initializeSocket = () => {
+      const newSocket = io(process.env.REACT_APP_SOCKET_IO_SERVER_URL);
 
       newSocket.on('message', message => {
         setMessages(prevMessages => [...prevMessages, message]);
       });
 
-      newSocket.on('connect_error', (err) => {
-        setError("Connection failed. Please try again later.");
-      });
+      newSocket.on('connect_error', () => handleError("Connection failed. Please try again later."));
 
-      newSocket.on('error', (errorMessage) => {
-        setError(errorMessage);
-      });
-    } catch (error) {
-      setError("Failed to initialize socket connection.");
-    }
+      newSocket.on('error', (errorMessage) => handleError(errorMessage));
 
-    return () => {
-      if (newSocket) newSocket.disconnect();
+      return newSocket;
     };
-  }, []);
+
+    // Only initialize if socket is not already established
+    if (!socket) {
+      const newSocket = initializeSocket();
+      setSocket(newSocket);
+
+      // Clean up on unmount
+      return () => {
+        if (newSocket) newSocket.disconnect();
+      };
+    }
+  }, [socket]);
+
+  const handleError = (message) => {
+    setError(message);
+    // Add logic here if you're planning to log errors or send them to an error tracking service
+  };
 
   const sendMessage = (event) => {
     event.preventDefault();
-    if (!currentMessage) return;
+    if (!currentMessage || !socket) return;
 
-    try {
-      socket.emit('message', currentMessage, (response) => {
-        if (!response.ok) {
-          setError("Failed to send message. Please try again later.");
-        }
-      });
-      setCurrentMessage('');
-    } catch (error) {
-      setError("An error occurred while sending the message.");
-    }
+    socket.emit('message', currentMessage, (response) => {
+      if (!response.ok) {
+        handleError("Failed to send message. Please try again later.");
+      } else {
+        setCurrentMessage(''); // Clear message only upon successful send
+      }
+    });
   };
 
   return (
