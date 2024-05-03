@@ -6,6 +6,7 @@ const App = () => {
   const [messages, setMessages] = useState([]);
   const [currentMessage, setCurrentMessage] = useState('');
   const [error, setError] = useState('');
+  const [usersOnline, setUsersOnline] = useState(0); // Added for users online feature
 
   useEffect(() => {
     // Socket Initialization
@@ -14,6 +15,11 @@ const App = () => {
 
       newSocket.on('message', message => {
         setMessages(prevMessages => [...prevMessages, message]);
+      });
+
+      // Handle users count update
+      newSocket.on('updateUserCount', count => {
+        setUsersOnline(count);
       });
 
       newSocket.on('connect_error', () => handleError("Connection failed. Please try again later."));
@@ -57,6 +63,8 @@ const App = () => {
     <div>
       <h1>Chat Application</h1>
       {error && <p style={{ color: "red" }}>{error}</p>}
+      {/* Display Users Online */}
+      <p>Users Online: {usersOnline}</p>
       <ul>
         {messages.map((message, index) => (
           <li key={index}>{message}</li>
