@@ -8,13 +8,19 @@ const App = () => {
   const [error, setError] = useState('');
   const [usersOnline, setUsersOnline] = useState(0);
 
-  const handleError = useCallback((message) => {
-    setError(message);
+  const handleError = useCallback((message, errorType = 'Socket') => {
+    setError(`${errorType} Error: ${message}`);
+    setTimeout(() => {
+      setError('');
+    }, 5000);
   }, []);
 
   useEffect(() => {
     const initializeSocket = () => {
-      const newSocket = io(process.env.REACT_APP_SOCKET_IO_SERVER_URL);
+      const newSocket = io(process.env.REACT_APP_SOCKET_IO_SERVER_URL, {
+        reconnectionAttempts: 5,
+        reconnectionDelayMax: 10000,
+      });
 
       newSocket.on('message', (message) => {
         setMessages((prevMessages) => [...prevMessages, message]);
@@ -24,8 +30,11 @@ const App = () => {
         setUsersOnline(count);
       });
 
-      newSocket.on('connect_error', () => handleError("Connection failed. Please try again later."));
-      newSocket.on('error', (errorMessage) => handleError(errorMessage));
+      newSocket.on('connect_error', (err) => handleError(err.message || "Connection failed. Please try again later.", 'Connect'));
+      newSocket.on('connect_failed', () => handleError("Connection failed. Please try again later.", 'Connect Failed'));
+      newSocket.on('error', (errorMessage) => handleError(errorMessage, 'General'));
+
+      newSocket.on('reconnect_failed', () => handleError("Reconnection Failed. Please refresh the page to try again.", 'Reconnect Failed'));
 
       return newSocket;
     };
@@ -34,7 +43,11 @@ const App = () => {
       const newSocket = initializeSocket();
       setSocket(newSocket);
 
-      return () => newSocket.disconnect();
+      return () => {
+        if (newSocket) {
+          newSocket.disconnect();
+        }
+      };
     }
   }, [socket, handleError]);
 
@@ -42,12 +55,13 @@ const App = () => {
     event.preventDefault();
 
     if (!currentMessage.trim() || !socket) {
+      handleError("Cannot send an empty message or socket not connected.", 'Message Send');
       return;
     }
 
     socket.emit('message', currentMessage, (response) => {
       if (!response.ok) {
-        handleError("Failed to send message. Please try again later.");
+        handleError("Failed to send message. Please try again later.", 'Message Send');
       } else {
         setCurrentMessage('');
       }
