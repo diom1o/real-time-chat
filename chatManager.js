@@ -1,27 +1,27 @@
 const io = require('socket.io')(process.env.SOCKET_IO_PORT || 3000, {
   cors: {
-    origin: '*',
+    origin: '*', // Allow connections from any origin
   },
 });
 
-let users = new Map(); // Using Map for more efficient lookups and memory management
-let messages = []; // Consider limiting the size or implementing a cleanup strategy
+let users = new Map();
+
+let messages = [];
 
 const addUser = (userId, nickname) => {
-  users.set(userId, nickname); // More efficient for additions/removals
+  users.set(userId, nickname);
 };
 
 const removeUser = (userId) => {
-  users.delete(userId); // More efficient than delete operator for objects
+  users.delete(userId);
 };
 
 const broadcastMessage = (message) => {
-  // Consider implementing a strategy to limit the size of the messages array
-  // For instance, only keep the last 100 messages in memory
   if (messages.length >= 100) {
-    messages.shift(); // Remove oldest message to maintain array size
+    messages.shift();
   }
   messages.push(message);
+
   io.emit('chat message', message);
 };
 
@@ -34,7 +34,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('register nickname', (nickname) => {
-    let userId = socket.id;
+    const userId = socket.id;
     addUser(userId, nickname);
     console.log(`${nickname} has joined the chat.`);
     socket.emit('nickname registered', nickname);
